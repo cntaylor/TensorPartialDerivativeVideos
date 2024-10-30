@@ -43,12 +43,19 @@ class Main(Scene):
         elif num_dims == 2:
             return Matrix([[f'{char}_{{{i+1},{j+1}}}' for j in range(lens[1])] for i in range(lens[0])])
         elif num_dims == 3:
-            ts = []
-            for i in range(lens[0]):
-                ts.append(Matrix([[f'{char}_{{{i+1},{j+1},{k+1}}}' for k in range(lens[2])] for j in range(lens[1])]))
-                if i != 0:
-                    ts[i].next_to(ts[i-1], np.array([1.,-.5,0]), buff=.25)
-            return VGroup(*ts)
+            ts = [None] * lens[0]
+            curr_scale=.5
+            curr_pos = np.array([0,0,0.])
+            for i in reversed(range(lens[0])):
+                ts[i] = Matrix([[f'{char}_{{{i+1},{j+1},{k+1}}}' for k in range(lens[2])] for j in range(lens[1])], include_background_rectangle=True)
+                br = ts[i].get_background_rectangle()
+                br.set_fill(BLACK, opacity=0.5)
+                if i != lens[0]-1:
+                    curr_scale *= 1.1
+                    curr_pos -= np.array([1,-.5,0])
+                ts[i].move_to(curr_pos)
+                ts[i].scale(curr_scale)
+            return VGroup(*reversed(ts))
             
     def tensorStuff(self):
         """
