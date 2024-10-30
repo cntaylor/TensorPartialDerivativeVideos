@@ -24,29 +24,39 @@ class Main(Scene):
         # self.play(FadeIn(note))
         # self.wait(5 * TIME_SCALE)
         # self.clear()
-        # Animate how matrix multiplcation is just a bunch of dot products
+        # # Animate how matrix multiplcation is just a bunch of dot products
         # self.matrix_mult_as_dot_products()
         # self.clear()
         # Now to introduce tensors
         self.tensorStuff()
 
-    def create_tens(self, *kwargs):
-        num_dims = len(kwargs)
+    def create_tens(self, lens=[3,3,3], char = 'T'):
+        # lens = lenghts of the different dimensions
+        # char = character to use for the tensor
+        # Retuns a VGroup with the tensor (if 3D), a Matrix with the correct stuff otherwise
+        # Create the tensor
+        num_dims = len(lens)
         assert num_dims > 0 and num_dims < 4, 'Can only create 1, 2, and 3D tensors'
 
         if num_dims == 1:
-            return Matrix([[f'T_{i+1}'] for i in range(kwargs[0])])
+            return Matrix([[f'{char}_{i+1}'] for i in range(lens[0])])
         elif num_dims == 2:
-            return Matrix([[f'T_{i+1,j+1}' for j in range(kwargs[1])] for i in range(kwargs[0])])
+            return Matrix([[f'{char}_{{{i+1},{j+1}}}' for j in range(lens[1])] for i in range(lens[0])])
         elif num_dims == 3:
             ts = []
-            for i in range(kwargs[0]):
-                ts.append(Matrix([[f'T_{i+1,j+1,k+1}' for k in range(kwargs[2])] for j in range(kwargs[1])]))
+            for i in range(lens[0]):
+                ts.append(Matrix([[f'{char}_{{{i+1},{j+1},{k+1}}}' for k in range(lens[2])] for j in range(lens[1])]))
                 if i != 0:
-                    ts[i].next_to(ts[i-1], DOWN,RIGHT)
+                    ts[i].next_to(ts[i-1], np.array([1.,-.5,0]), buff=.25)
             return VGroup(*ts)
             
     def tensorStuff(self):
+        """
+        Animate the following:
+        - A matrix is a rectangular array or table of ... with elements or entries arranged in rows and columns
+        - A tensor is a multidimensional array
+        - Show a vector, a matrix, and a tensor all in sequence, with the last one replacing the first two
+        """
         mat_def = Text('Wikipedia says:\n A matrix is a rectangular array or table of ...\n with elements or entries arranged in rows and columns')
         self.play(FadeIn(mat_def))
         self.wait(3 * TIME_SCALE)
@@ -56,24 +66,13 @@ class Main(Scene):
         self.clear()
 
         # Show a vector
-        v = self.create_tens(3).scale(.8)
+        v = self.create_tens([3],'v').scale(.8)
         self.play(Create(v))
-        m = self.create_tens(3,3).scale(.8)
+        m = self.create_tens([3,3],'m').scale(.8)
         self.play(ReplacementTransform(v, m))
         self.wait(1 * TIME_SCALE)
-        t1 = Matrix([['T_{1,1,1}', 'T_{1,1,2}', 'T_{1,1,3}'], 
-                    ['T_{1,2,1}', 'T_{1,2,2}', 'T_{1,2,3}'], 
-                    ['T_{1,3,1}', 'T_{1,3,2}', 'T_{1,3,3}']]).scale(.8)
-        t2 = Matrix([['T_{2,1,1}', 'T_{2,1,2}', 'T_{2,1,3}'], 
-                    ['T_{2,2,1}', 'T_{2,2,2}', 'T_{2,2,3}'], 
-                    ['T_{2,3,1}', 'T_{2,3,2}', 'T_{2,3,3}']]).scale(.8)        
-        t3 = Matrix([['T_{3,1,1}', 'T_{3,1,2}', 'T_{3,1,3}'], 
-                    ['T_{3,2,1}', 'T_{3,2,2}', 'T_{3,2,3}'], 
-                    ['T_{3,3,1}', 'T_{3,3,2}', 'T_{3,3,3}']]).scale(.8)
-        t2.move_to(t1).move_to(RIGHT).move_to(DOWN)
-        t3.move_to(t1).move_to(RIGHT*2).move_to(DOWN*2)
-        t_group = VGroup(t1, t2, t3)        
-        self.play(ReplacementTransform(m, t_group))
+        t = self.create_tens([3,3,3],'T').scale(.8)        
+        self.play(ReplacementTransform(m, t))
         self.wait(5 * TIME_SCALE)
 
 
