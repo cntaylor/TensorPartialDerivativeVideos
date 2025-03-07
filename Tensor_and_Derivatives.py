@@ -12,30 +12,41 @@ def surface_grad_func(u,v):
     return np.array([-(u/8)*np.exp(-(u**2+v**2)/16)*np.sin(np.pi/4*(2*u+v)) + (np.pi/2)*np.exp(-(u**2+v**2)/16)*np.cos(np.pi/4*(2*u+v)), 
                     -(v/8)*np.exp(-(u**2+v**2)/16)*np.sin(np.pi/4*(2*u+v)) + (np.pi/4)*np.exp(-(u**2+v**2)/16)*np.cos(np.pi/4*(2*u+v))])
 
-def path_on_surface(twoD_interpolation_func): # returns a PathFuncType 
-    #PathFuncType has 2 3D points as input, an alpha value, and 
-    # returns a 3D point
-    # Assume the 3D point is [u,v,surface_func(u,v)]
-    # Use the twoD path created by twoD_interpolation_func
-    # and return where things are on the surface
-    def func(start_points: np.ndarray, end_points: np.ndarray, alpha: float) -> np.ndarray:
-        twoD_points = twoD_interpolation_func(start_points, end_points, alpha)
-        if len(twoD_points.shape) == 1:
-            return surface_func(twoD_points[0],twoD_points[1])
-        else:
-            going_out = []
-            for point in twoD_points:
-                going_out.append(surface_func(point[0],point[1]))
-            return np.array(going_out)
-
-    return func
-
+def simple_path(dot,alpha):
+    dot.move_to(np.array([0.,-2.,0.]) + alpha * (np.array([5.,4.,4.]) - np.array([0.,-2.,0.])))
 
 class Main_3D(ThreeDScene):
 
+    start_pt = np.array([-1.,-2.])
+    end_pt = np.array([5.,4.])
+    arrow_length_scalar = .7
+    line_params = {'color': RED, 'thickness': .04}
 
-    def draw_arrow(self, deriv_f, ax, dot_loc):
-        
+    def path_func(self, alpha):
+        # Interpolation between two points
+        # For now, simple linear interpolation
+        # print('Got alpha', alpha,'in path_func')
+        return self.start_pt + alpha * (self.end_pt - self.start_pt)
+
+    def update_dot(self, dot, alpha):
+        # path_func returns x and y.  Star breaks it out
+        # surface func returns x,y, and z (in an array). Star breaks it out
+        dot.move_to(surface_func(*self.path_func(alpha)))
+
+    def update_line(self, line, alpha):
+        line_mid = surface_func(*self.path_func(alpha))
+        grad = surface_grad_func(*self.path_func(alpha))
+        grad3d = np.array([grad[0], grad[1], np.dot(grad,grad)])
+        # According to Gemini, the end of the arrow should be a point on the tangent plane,
+        # which can be computed as z = z0 + fx(x0, y0)(x - x0) + fy(x0, y0)(y - y0)
+        line_end = line_mid + grad3d*self.arrow_length_scalar
+        line_start = line_mid - grad3d * self.arrow_length_scalar
+        # print('alpha',alpha,'line_end',line_end,'line_start',line_start)
+        line.become(
+            Line3D(line_start, line_end, **self.line_params))
+
+
+
     def construct(self):
         self.set_camera_orientation(phi=75 * DEGREES, theta=-30 * DEGREES)
 
@@ -43,11 +54,13 @@ class Main_3D(ThreeDScene):
         myTemplate.add_to_preamble(r"\usepackage{bm}")
         myTemplate.add_to_preamble(r"\usepackage{amsmath}")
         
+        # Original function in LaTeX
         orig_func = Tex('$f(\\bm{x}) = e^{-\\frac{x^2+y^2}{16}}\\sin\\left(\\frac{\\pi}{4}(2x+y)\\right);$',
-                        tex_template=myTemplate).scale(1.2).move_to(LEFT*3+UP*2.5)
+                        tex_template=myTemplate).scale(1.2).move_to(LEFT*2.5+UP*3)
         nex_func = Tex('$\\bm{x} = \\begin{bmatrix}x \\\\ y \\end{bmatrix}$',
                        tex_template=myTemplate).next_to(orig_func,RIGHT*2)
         self.add_fixed_in_frame_mobjects(orig_func,nex_func)
+        # # Derivatives function in LaTeX
         # d_front = Tex('$\\frac{\\partial f}{\\partial \\bm{x}} = $', tex_template=myTemplate).scale(1.2).next_to(orig_func,DOWN, aligned_edge=LEFT)
         # d_matrix = Matrix([['-\\frac{2x}{16}e^{-\\frac{x^2+y^2}{16}}\\sin\\left(\\frac{\\pi}{4}(2x+y)\\right) + \\frac{\\pi}{2}e^{-\\frac{x^2+y^2}{16}}\\cos\\left(\\frac{\\pi}{4}(2x+y)'], 
         #                    ['-\\frac{2y}{16}e^{-\\frac{x^2+y^2}{16}}\\sin\\left(\\frac{\\pi}{4}(2x+y)\\right) + \\frac{\\pi}{4}e^{-\\frac{x^2+y^2}{16}}\\cos\\left(\\frac{\\pi}{4}(2x+y)\\right)']],
@@ -63,28 +76,30 @@ class Main_3D(ThreeDScene):
         label = axes.get_axis_labels(x_label="x", y_label="y", z_label="z")
         self.add(label)
         self.wait(3 * TIME_SCALE)
-        dot = Dot().set_color(RED)
-        slope_line = VMobject()
-        self.add(dot, slope_line)
 
-        slope_line.add_updater(lambda x: x.become(self.draw_arrow(surface_grad_func, axes, dot.get_center())))
+        #Now draw the gradients on the surface...
+        starting_point = surface_func(self.start_pt[0],self.start_pt[1])
+        # Define the moving things
+        moving_dot = Dot(point=starting_point, color=GREEN)
+        grad1= surface_grad_func(*self.start_pt)
+        grad3d = np.array([grad1[0], grad1[1], np.dot(grad1,grad1)])
+        # grad3d /= np.linalg.norm(grad3d)
+        # According to Gemini, the end of the arrow should be a point on the tangent plane,
+        # which can be computed as z = z0 + fx(x0, y0)(x - x0) + fy(x0, y0)(y - y0)
+        line_end = starting_point+grad3d*self.arrow_length_scalar
+        line_begin = starting_point - grad3d * self.arrow_length_scalar
+        moving_grad_line = Line3D(line_begin, line_end, **self.line_params)
 
-
-        # Define the path
-        pt_start = surface_func(0.,-2.)
-        pt_end = surface_func(5.,4.)
-        starting_point=VGroup(Dot(pt_start)).set_color(RED)
-        ending_point=VGroup(Dot(pt_end)).set_color(RED)
-
-
+        self.add(moving_grad_line, moving_dot)
+        self.wait(1)
+        # self.play(Create(moving_grad_line), run_time = 3* TIME_SCALE)
         self.play(
-            Transform(
-                starting_point,
-                ending_point,
-                path_func=path_on_surface(utils.paths.path_along_arc(np.pi/2)),
-                run_time=6*TIME_SCALE,
-            )
+            UpdateFromAlphaFunc(moving_dot, partial(self.update_dot)),
+            UpdateFromAlphaFunc(moving_grad_line, partial(self.update_line)),
+            run_time = 6 * TIME_SCALE, 
+
         )
+
         self.wait(5 * TIME_SCALE)
         # Discussion text...
 
