@@ -15,12 +15,15 @@ def surface_grad_func(u,v):
 def simple_path(dot,alpha):
     dot.move_to(np.array([0.,-2.,0.]) + alpha * (np.array([5.,4.,4.]) - np.array([0.,-2.,0.])))
 
+    
 class Main_3D(ThreeDScene):
 
     start_pt = np.array([-1.,-2.])
     end_pt = np.array([5.,4.])
     arrow_length_scalar = .7
     line_params = {'color': RED, 'thickness': .04}
+    axis_scale_factor = 0.9
+    axis_shift = IN
 
     def path_func(self, alpha):
         # Interpolation between two points
@@ -31,12 +34,12 @@ class Main_3D(ThreeDScene):
     def update_dot(self, dot, alpha):
         # path_func returns x and y.  Star breaks it out
         # surface func returns x,y, and z (in an array). Star breaks it out
-        dot.move_to(surface_func(*self.path_func(alpha)))
+        dot.move_to(surface_func(*self.path_func(alpha))*self.axis_scale_factor + self.axis_shift)
 
     def update_line(self, line, alpha):
-        line_mid = surface_func(*self.path_func(alpha))
+        line_mid = surface_func(*self.path_func(alpha))*self.axis_scale_factor + self.axis_shift
         grad = surface_grad_func(*self.path_func(alpha))
-        grad3d = np.array([grad[0], grad[1], np.dot(grad,grad)])
+        grad3d = np.array([grad[0], grad[1], np.dot(grad,grad)]) * self.axis_scale_factor
         # According to Gemini, the end of the arrow should be a point on the tangent plane,
         # which can be computed as z = z0 + fx(x0, y0)(x - x0) + fy(x0, y0)(y - y0)
         line_end = line_mid + grad3d*self.arrow_length_scalar
@@ -45,42 +48,47 @@ class Main_3D(ThreeDScene):
         line.become(
             Line3D(line_start, line_end, **self.line_params))
 
-
-
-    def construct(self):
-        self.set_camera_orientation(phi=75 * DEGREES, theta=-30 * DEGREES)
-
-        myTemplate = TexTemplate()
-        myTemplate.add_to_preamble(r"\usepackage{bm}")
-        myTemplate.add_to_preamble(r"\usepackage{amsmath}")
-        
-        # Original function in LaTeX
-        orig_func = Tex('$f(\\bm{x}) = e^{-\\frac{x^2+y^2}{16}}\\sin\\left(\\frac{\\pi}{4}(2x+y)\\right);$',
-                        tex_template=myTemplate).scale(1.2).move_to(LEFT*2.5+UP*3)
-        nex_func = Tex('$\\bm{x} = \\begin{bmatrix}x \\\\ y \\end{bmatrix}$',
-                       tex_template=myTemplate).next_to(orig_func,RIGHT*2)
-        self.add_fixed_in_frame_mobjects(orig_func,nex_func)
-        # # Derivatives function in LaTeX
-        # d_front = Tex('$\\frac{\\partial f}{\\partial \\bm{x}} = $', tex_template=myTemplate).scale(1.2).next_to(orig_func,DOWN, aligned_edge=LEFT)
-        # d_matrix = Matrix([['-\\frac{2x}{16}e^{-\\frac{x^2+y^2}{16}}\\sin\\left(\\frac{\\pi}{4}(2x+y)\\right) + \\frac{\\pi}{2}e^{-\\frac{x^2+y^2}{16}}\\cos\\left(\\frac{\\pi}{4}(2x+y)'], 
-        #                    ['-\\frac{2y}{16}e^{-\\frac{x^2+y^2}{16}}\\sin\\left(\\frac{\\pi}{4}(2x+y)\\right) + \\frac{\\pi}{4}e^{-\\frac{x^2+y^2}{16}}\\cos\\left(\\frac{\\pi}{4}(2x+y)\\right)']],
-        #                    element_alignment_corner=[0.,0,0]).next_to(d_front,RIGHT)
-        # d_func = VGroup(d_front, d_matrix).next_to(orig_func,DOWN, aligned_edge=LEFT)
-        # self.add_fixed_in_frame_mobjects(d_func)
+    def create_surface_group(self):
+        # Now draw the 3D (2D surface) function
         func_surf = Surface(surface_func, v_range = [-6,6], u_range = [-6,6])
         func_surf.set_style(fill_opacity=1, stroke_color=BLUE)
         
         axes = ThreeDAxes(x_range=(-7,7,1), y_range=(-7,7,1), z_range=(-2,2,1), 
                           x_length=14, y_length=14, z_length=4)
-        self.add(axes, func_surf)
         label = axes.get_axis_labels(x_label="x", y_label="y", z_label="z")
-        self.add(label)
+        
+        surf_group = (
+            VGroup(axes, func_surf, label)
+            .scale(self.axis_scale_factor).move_to(self.axis_shift)
+        )
+        return surf_group
+
+    def run_surface_screen(self):
+        self.set_camera_orientation(phi=75 * DEGREES, theta=-30 * DEGREES)
+
+      
+        # Original function in LaTeX
+        orig_func = Tex('$f(\\bm{x}) = e^{-\\frac{x^2+y^2}{16}}\\sin\\left(\\frac{\\pi}{4}(2x+y)\\right);$',
+                        tex_template=self.tex_template).scale(.9).move_to(LEFT*2.5+UP*3.5)
+        nex_func = Tex('$\\bm{x} = \\begin{bmatrix}x \\\\ y \\end{bmatrix}$',
+                       tex_template=self.tex_template).scale(.8).next_to(orig_func,RIGHT*2)
+        self.add_fixed_in_frame_mobjects(orig_func,nex_func)
+        # Derivatives function in LaTeX
+        d_front = Tex('$\\frac{\\partial f}{\\partial \\bm{x}} = $', tex_template=myTemplate).scale(1).next_to(orig_func,DOWN, aligned_edge=LEFT)
+        d_matrix = Matrix([['-\\frac{2x}{16}e^{-\\frac{x^2+y^2}{16}}\\sin\\left(\\frac{\\pi}{4}(2x+y)\\right) + \\frac{\\pi}{2}e^{-\\frac{x^2+y^2}{16}}\\cos\\left(\\frac{\\pi}{4}(2x+y)'], 
+                           ['-\\frac{2y}{16}e^{-\\frac{x^2+y^2}{16}}\\sin\\left(\\frac{\\pi}{4}(2x+y)\\right) + \\frac{\\pi}{4}e^{-\\frac{x^2+y^2}{16}}\\cos\\left(\\frac{\\pi}{4}(2x+y)\\right)']],
+                           element_alignment_corner=[0.,0,0],v_buff=1.2).scale(.8).next_to(d_front,RIGHT)
+        d_func = VGroup(d_front, d_matrix).next_to(orig_func,DOWN, aligned_edge=LEFT)
+        self.add_fixed_in_frame_mobjects(d_func)
+        
+        surf_group = self.create_surface_group()
+        self.add(surf_group)
         self.wait(3 * TIME_SCALE)
 
         #Now draw the gradients on the surface...
         starting_point = surface_func(self.start_pt[0],self.start_pt[1])
         # Define the moving things
-        moving_dot = Dot(point=starting_point, color=GREEN)
+        moving_dot = Dot(point=starting_point+IN, color=GREEN)
         grad1= surface_grad_func(*self.start_pt)
         grad3d = np.array([grad1[0], grad1[1], np.dot(grad1,grad1)])
         # grad3d /= np.linalg.norm(grad3d)
@@ -91,17 +99,209 @@ class Main_3D(ThreeDScene):
         moving_grad_line = Line3D(line_begin, line_end, **self.line_params)
 
         self.add(moving_grad_line, moving_dot)
-        self.wait(1)
-        # self.play(Create(moving_grad_line), run_time = 3* TIME_SCALE)
         self.play(
             UpdateFromAlphaFunc(moving_dot, partial(self.update_dot)),
             UpdateFromAlphaFunc(moving_grad_line, partial(self.update_line)),
-            run_time = 6 * TIME_SCALE, 
+            run_time = 8 * TIME_SCALE, 
 
         )
 
-        self.wait(5 * TIME_SCALE)
+        self.wait(2 * TIME_SCALE)
+
+        self.remove(moving_dot, moving_grad_line)
+        surf_group.generate_target()
+        surf_group.target.scale(.5*self.axis_scale_factor).move_to(IN*1.5 + DOWN*3.1) # IN = Z axis (down), and DOWN = y-axis (left)
+        self.play(MoveToTarget(surf_group))
+        self.wait(1 * TIME_SCALE)
         # Discussion text...
+        txt_scalar = 1
+        x_txt = Tex('$x$').scale(txt_scalar).move_to(RIGHT*1.2+DOWN).set_color(YELLOW)
+        x_vector_txt = Tex('is a vector').scale(txt_scalar).next_to(x_txt, RIGHT*6.5, aligned_edge=LEFT)
+        fx_txt = Tex('$f(x)$').scale(txt_scalar).next_to(x_txt, DOWN,aligned_edge=LEFT).set_color(YELLOW)
+        fx_scalar_txt = Tex('is a scalar').scale(txt_scalar).next_to(x_vector_txt, DOWN, aligned_edge=LEFT)
+        result_txt = Tex('$\\Rightarrow\\frac{\\partial f(x)}{\\partial x}$').scale(txt_scalar).next_to(fx_txt, DOWN,aligned_edge=LEFT).set_color(YELLOW)
+        result_vector_txt = Tex('is a vector').scale(txt_scalar).next_to(fx_scalar_txt, DOWN*1.5, aligned_edge=LEFT)
+        self.add_fixed_in_frame_mobjects(x_txt)
+        self.add_fixed_in_frame_mobjects(x_vector_txt)
+        self.wait(1*TIME_SCALE)
+        self.add_fixed_in_frame_mobjects(fx_txt)
+        self.add_fixed_in_frame_mobjects(fx_scalar_txt)
+        self.wait(1*TIME_SCALE)
+        self.add_fixed_in_frame_mobjects(result_txt)
+        self.add_fixed_in_frame_mobjects(result_vector_txt)
+        self.wait(5*TIME_SCALE)
+        self.clear()
+
+    def equal_table_entries(self, num, table_size, ):
+        # Take in a table and return the entry numbers that will be the same.  Assuming
+        # row in the table is of size table_size and that the number of rows is also
+        # table_size
+        going_out = []
+        for i in range(num):
+            going_out.append(num+i*(table_size-1))
+        return going_out
+    
+    def animated_table_tensors(self):
+        table_loc = LEFT*2 + UP*2
+        table_scale = 0.7
+        # Create the full table data
+        table_data = [
+            ["0", "1", "2", "3", r"\cdots"],
+            ["1", "2", "3", "4", r"\cdots"],
+            ["2", "3", "4", "5", r"\cdots"],
+            ["3", "4", "5", "6", r"\cdots"],
+            [r"\vdots", r"\vdots", r"\vdots", r"\vdots", r"\ddots"]
+        ]
+        
+        # Define row and column labels using MathTex for LaTeX
+        row_labels = [Text("0 (scalar)"), Text("1 (vector)"), Text("2 (matrix)"), Text("3D tensor"), MathTex(r"\vdots")]
+        col_labels = [Text("0 (scalar)"), Text("1 (vector)"), Text("2 (matrix)"), Text("3D tensor"), MathTex(r"\cdots")]
+
+        # Create the full table
+        full_table = Table(
+            table_data,
+            row_labels=row_labels,
+            col_labels=col_labels,
+            top_left_entry=MathTex(r"\bm{x}\ \backslash\ f(\bm{x})", tex_template=self.tex_template), 
+            include_outer_lines=True,
+            element_to_mobject=MathTex,
+            element_to_mobject_config={"tex_template": self.tex_template},
+            h_buff=1.0,
+            v_buff=0.6
+        ).scale(.6).move_to(LEFT*.5+UP)
+
+        # Step 1: Show just the 2x2 portion with only (0,0) entry
+        initial_table = Table(
+            [["0 (scalar)", ""],
+             ["", ""]],
+            row_labels=[Text("0 (scalar)"), Text("1 (vector)")],
+            col_labels=[Text("0 (scalar)"), Text("1 (vector)")],
+            top_left_entry=MathTex(r"\bm{x}\ \backslash\ f(\bm{x})", tex_template=self.tex_template),
+            include_outer_lines=True,
+            h_buff=1.0,
+            v_buff=0.6
+        ).scale(table_scale).move_to(table_loc)
+
+        self.play(Create(initial_table))
+
+        ax = Axes(x_range=[-10,10])
+        labels = ax.get_axis_labels(x_label="x", y_label="f(x)")
+        func = lambda x: x**(1./3) if x>=0 else -(-x)**(1./3)
+        deriv = lambda x: 1./3 * x**(-2./3) if x>=0 else -(-x)**(-2./3)
+        loc = RIGHT*3 + DOWN*1.5
+        ax_group = VGroup(ax, labels).scale(0.6).move_to(loc)
+        # Make graph sections so I can have the derivative slope just follow a portion of the graph
+        graph1 = ax.plot(func, x_range=[-10,.5,.01], color=BLUE)
+        graph2 = ax.plot(func, x_range=[.5,8.5,.01], color=BLUE)
+        graph3 = ax.plot(func, x_range=[8.5, 10, .01], color=BLUE)
+        self.add(ax_group)
+        graphs = VGroup(graph1, graph2, graph3)
+        self.play(Create(graphs))
+        # And trace it along the curve
+        x_dot = 2.5
+        point = func(x_dot)
+        slope = deriv(x_dot)
+        if abs(slope<1):
+            x_dist =1
+        else:
+            x_dist = 2-slope        
+        dot = Dot(ax.coords_to_point(x_dot, point)).set_color(RED)
+        line = Line(ax.coords_to_point(x_dot-x_dist, point - slope*x_dist), 
+                    ax.coords_to_point(x_dot+x_dist,  point + slope*x_dist), 
+                    color=RED)
+        self.add(dot, line)
+        self.wait(5 * TIME_SCALE)
+
+
+         # Step 2: Show 0th row and 1st column
+        temp_table_1 = Table(
+            [["0 (scalar)", "1 (vector)"],
+             ["", ""]],
+            row_labels=[Text("0 (scalar)"), Text("1 (vector)")],
+            col_labels=[Text("0 (scalar)"), Text("1 (vector)")],
+            top_left_entry=MathTex(r"\bm{x}\ \backslash\ f(\bm{x})", tex_template=self.tex_template),
+            include_outer_lines=True,
+            h_buff=1.0,
+            v_buff=0.6
+        ).scale(table_scale).move_to(table_loc)
+
+        self.play(Transform(initial_table, temp_table_1))
+        self.wait(1 * TIME_SCALE)
+
+        func2 = lambda x: np.sin(np.pi*x/2)
+        deriv_func2 = lambda x: np.pi/2 * np.cos(np.pi*x/2)
+        second_graph = ax.plot(func2, x_range=[-10,10,.01], color=GREEN)
+        self.play(Create(second_graph))
+        point = func2(x_dot)
+        slope = deriv_func2(x_dot)
+        dot2 = Dot(ax.coords_to_point(x_dot, point), color=RED)
+        line2 = Line(ax.coords_to_point(x_dot-x_dist, point - slope*x_dist), 
+                    ax.coords_to_point(x_dot+x_dist,  point + slope*x_dist), 
+                    color=RED)
+        self.add(dot2, line2)
+        
+        self.wait(2 * TIME_SCALE)
+        self.remove(ax_group, graphs, dot2, line2, second_graph, dot, line)
+
+        # Step 3: Show 1st row and 0th column
+        temp_table_2 = Table(
+            [["0 (scalar)", "1 (vector)"],
+             ["1 (vector)", ""]],
+            row_labels=[Text("0 (scalar)"), Text("1 (vector)")],
+            col_labels=[Text("0 (scalar)"), Text("1 (vector)")],
+            top_left_entry=MathTex(r"\bm{x}\ \backslash\ f(\bm{x})",tex_template=self.tex_template),
+            include_outer_lines=True,
+            h_buff=1.0,
+            v_buff=0.6
+        ).scale(table_scale).move_to(table_loc)
+
+        self.play(Transform(initial_table, temp_table_2))
+        surf_group = self.create_surface_group().scale(0.5).move_to(DOWN+RIGHT)
+        self.play(FadeIn(surf_group))
+        self.wait(3 * TIME_SCALE)
+        self.remove(surf_group)
+        self.wait(1 * TIME_SCALE)
+
+
+        # Step 4: Show 1st row and 2nd column
+        temp_table_3 = Table(
+            [["0 (scalar)", "1 (vector)"],
+             ["1 (vector)", "2 (matrix)"]],
+            row_labels=[Text("0 (scalar)"), Text("1 (vector)")],
+            col_labels=[Text("0 (scalar)"), Text("1 (vector)")],
+            top_left_entry=MathTex(r"\bm{x}\ \backslash\ f(\bm{x})",tex_template=self.tex_template),
+            include_outer_lines=True,
+            h_buff=1.0,
+            v_buff=0.6
+        ).scale(table_scale).move_to(table_loc)
+
+        self.play(Transform(initial_table, temp_table_3))
+        self.wait(1)
+
+        # Step 5: Show the full table
+        self.play(Transform(initial_table, full_table))
+        self.wait(2 * TIME_SCALE)
+
+        # Highlight all vector entries
+        full_table.add_highlighted_cell((1, 1), color=YELLOW)
+        self.wait(1 * TIME_SCALE)
+
+        full_table.add_highlighted_cell((2, 1), color=GREEN)
+        self.wait(1 * TIME_SCALE)
+
+        # Highlight all matrix entries
+        cell = full_table.get_cell((1, 2))
+        self.play(cell.animate.set_color(YELLOW))
+        self.wait(1 * TIME_SCALE)
+
+    def construct(self):
+        self.tex_template = TexTemplate()
+        self.tex_template.add_to_preamble(r"\usepackage{bm}")
+        self.tex_template.add_to_preamble(r"\usepackage{amsmath}")
+
+
+        # self.run_surface_screen()
+        self.animated_table_tensors()
 
 
 
