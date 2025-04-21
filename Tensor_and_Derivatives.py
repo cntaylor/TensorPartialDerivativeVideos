@@ -498,16 +498,17 @@ class Main_3D(ThreeDScene):
                               r'-\cos\phi\sin\theta\sin\psi + \sin\phi\cos\psi & \cos\phi\sin\theta\cos\psi + \sin\phi\sin\psi & 0 \end{bmatrix}$',
                               tex_template = self.tex_template, color=GREEN)
         R_deriv3_group = VGroup(R_deriv3_pfrac, R_deriv3_matrix).scale(R_scaling).arrange(RIGHT).next_to(R_deriv2_group, DOWN)
-        R_deriv_tensor = Tex(r'$\frac{\partial \bm{R}_{mn}}{\partial \bm{\beta}_j} = $', tex_template = self.tex_template).next_to(d_func,DOWN*1.4, aligned_edge=LEFT)
+        R_deriv_tensor = Tex(r'$\frac{\partial \bm{R}_{mn}}{\partial \bm{\beta}_j} = $', tex_template = self.tex_template).next_to(d_func,DOWN*2.5, aligned_edge=LEFT)
 
         d_deriv_w_t_indicies = Tex(r'$\frac{\partial \bm{d}(\bm{y})_i}{\partial \bm{y}_l} = $ \begin{blockarray}{cccc} &  & $l$ & \\ \begin{block}{c[ccc]} \multirow{2.5}{*}{$i$} & $\frac{1}{\bm{y}_3}$ & 0 & $-\frac{\bm{y}_1}{\bm{y}_3^2}$\\ & 0 & $\frac{1}{\bm{y}_3}$ & $-\frac{\bm{y}_2}{\bm{y}_3^2}$\\ \end{block} \end{blockarray}',
-                      tex_template = self.tex_template).scale(0.85).next_to(d_func,RIGHT*2,aligned_edge=LEFT)
+                      tex_template = self.tex_template).next_to(R_deriv_tensor,DOWN *2, aligned_edge=LEFT)
         full_formula = Tex(r'$\frac{\partial \bm{u}_i}{\partial \bm{\beta}_j} = \frac{\partial \bm{d}(\bm{y})_i}{\partial \bm{y}_l} \bm{K}_{lm} \frac{\partial \bm{R}_{mn}}{\partial \bm{\beta}_j} (\bm{X} - \bm{T})_n$',
-                           tex_template = self.tex_template).next_to(R_deriv_tensor,DOWN*1.7, aligned_edge=LEFT)
+                           tex_template = self.tex_template).scale(1.2).next_to(d_deriv_w_t_indicies,DOWN*2.5, aligned_edge=LEFT)
         full_formula_mult_points = \
-            Tex(r'$\frac{\partial \bm{u}_{ki}}{\partial \bm{\beta}_j} = \frac{\partial \bm{d}(\bm{y})_i}{\partial \bm{y}_l} \bm{K}_{lm} \frac{\partial \bm{R}_{mn}}{\partial \bm{\beta}_j} (\bm{X}_{kn} - \bm{T}_n)$',
-                           tex_template = self.tex_template).next_to(d_deriv_w_t_indicies,DOWN, aligned_edge=LEFT)
+            Tex(r'$\frac{\partial \bm{u}_{ki}}{\partial \bm{\beta}_j} = \left.\frac{\partial \bm{d}(\bm{y})_{i}}{\partial \bm{y}_l}\right|_{\bm{y}_k} \bm{K}_{lm} \frac{\partial \bm{R}_{mn}}{\partial \bm{\beta}_j} (\bm{X}_{kn} - \bm{T}_n)$',
+                           tex_template = self.tex_template).scale(1.6)
         self.add_fixed_in_frame_mobjects(formula, d_func)
+        
 
         # Projection point (center of projection)
         projection_center = np.array([-1,0,0.])
@@ -619,10 +620,38 @@ class Main_3D(ThreeDScene):
         self.wait(1 * TIME_SCALE)
         self.play(Write(full_formula))
         self.wait(2*TIME_SCALE)
+        self.clear()
+        ff_copy = full_formula.copy()
+        ff_copy.scale(1.6).to_corner(UL)
+        self.play(Write(ff_copy))
+        self.wait(1*TIME_SCALE)
+        py_code=Text('np.einsum("il,lm,mnj,n->ij", dd_dy, K, dR_dBeta, X_minus_T)').scale(.75).next_to(ff_copy, DOWN*1.2, aligned_edge=LEFT)
+        self.play(Write(py_code))
+        self.wait(2*TIME_SCALE)
+        full_formula_mult_points.next_to(py_code, DOWN*3, aligned_edge=LEFT)
+        self.play(Write(full_formula_mult_points))
+        py_code_2 = Text('np.einsum("kil,lm,mnj,kn->kij", dd_dy, K, dR_dBeta, X_minus_T)').scale(.75).next_to(full_formula_mult_points, DOWN, aligned_edge=LEFT)
+        self.play(Write(py_code_2))
+        self.wait(2*TIME_SCALE)
+
         # self.play(Transform(full_formula, full_formula_mult_points))
         # self.wait(2*TIME_SCALE)    
 
         # Now do an example of Python coding...
+    def final_screen(self):
+        review = Text("Review").set_color(BLUE).to_corner(UL)
+        self.play(Write(review))
+        self.wait(.2*TIME_SCALE)
+        point1 = Text('1. Tensors can store high dimensional derivatives').next_to(review, DOWN, aligned_edge=LEFT)
+        self.play(Write(point1))
+        self.wait(.2*TIME_SCALE)
+        point2 = Text('2. Tensor contraction implements the chain rule').next_to(point1, DOWN, aligned_edge=LEFT)
+        self.play(Write(point2))
+        self.wait(.2*TIME_SCALE)
+        point3 = Text('=> Very complex derivatives can be \n\t represented using tensors').next_to(point2, DOWN*1.5, aligned_edge=LEFT)
+        self.play(Write(point3))
+        self.wait(2*TIME_SCALE)
+
 
     def construct(self):
         self.tex_template = TexTemplate()
@@ -632,19 +661,21 @@ class Main_3D(ThreeDScene):
         self.tex_template.add_to_preamble(r'\usepackage{multirow}')
         self.tex_template.add_to_preamble(r'\usepackage{xcolor}')
 
-        # Opening quote:
-        self.opening_quote_v1()
-        self.clear()
-        # First, draw a derivative graph
-        self.derivative_graph()
-        self.clear()
-        # Draw a derviative graph for a (2D) surface
-        self.run_surface_screen()
-        self.animated_table_tensors()
-        self.clear()
-        self.chain_rule_review()
-        self.clear()
+        # # Opening quote:
+        # self.opening_quote_v1()
+        # self.clear()
+        # # First, draw a derivative graph
+        # self.derivative_graph()
+        # self.clear()
+        # # Draw a derviative graph for a (2D) surface
+        # self.run_surface_screen()
+        # self.animated_table_tensors()
+        # self.clear()
+        # self.chain_rule_review()
+        # self.clear()
         self.projection_example1()
+        self.clear()
+        self.final_screen()
 
 
 with tempconfig({"quality": "low_quality", "preview": True}):
