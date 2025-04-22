@@ -30,15 +30,42 @@ class Main_3D(ThreeDScene):
     old_theta = 0.
     old_gamma = 0.
 
-    def store_camera_orientation(self):
-        self.old_phi = self.camera.phi
-        self.old_theta = self.camera.theta
-        self.old_gamma = self.camera.gamma
+    def what_to_why(self):
+        #Code generated using grok.ai...
+        
+        # Define the large "what" text
+        what_text = Text("what", font="Arial", weight=BOLD, font_size=100).move_to(ORIGIN)
 
-    def restore_camera_orientation(self):
-        self.camera.phi = self.old_phi
-        self.camera.theta = self.old_theta
-        self.camera.gamma = self.old_gamma
+        # Create three circles with text
+        circle1 = Circle(radius=1.8, color=BLUE, fill_opacity=0.3).shift(LEFT * 4 + UP * 2)
+        circle2 = Circle(radius=1.8, color=GREEN, fill_opacity=0.3).shift(RIGHT * 4 + UP * 2)
+        circle3 = Circle(radius=1.8, color=YELLOW, fill_opacity=0.3).shift(DOWN * 2.5)
+
+        text1 = Text("tensors", font="Arial", font_size=30).move_to(circle1.get_center())
+        text2 = Text("tensor contraction", font="Arial", font_size=30).move_to(circle2.get_center())
+        text3 = Text("Einstein notation", font="Arial", font_size=30).move_to(circle3.get_center())
+
+        # Group circles and texts
+        circle_group = VGroup(circle1, circle2, circle3, text1, text2, text3)
+
+        # Define the "why" text with the same font and size as "what"
+        why_text = Text("why", font="Arial", weight=BOLD, font_size=100).move_to(ORIGIN)
+
+        # Animation sequence
+        # 1. Show "what"
+        self.play(Write(what_text), run_time=1)
+        self.wait(0.5*TIME_SCALE)
+
+        # 2. Fade in the circles with text
+        self.play(FadeIn(circle_group), run_time=2)
+        self.wait(0.5*TIME_SCALE)
+
+        # 3. Transition "what" to "why"
+        self.play(ReplacementTransform(what_text, why_text), run_time=1)
+        self.wait(0.5*TIME_SCALE)
+
+        # Hold the final frame
+        self.wait(1)
 
     def draw_slope_line(self, deriv_func, ax, dot_loc ):
         x,point = ax.point_to_coords(dot_loc)
@@ -223,7 +250,6 @@ class Main_3D(ThreeDScene):
         return surf_group
 
     def run_surface_screen(self):
-        self.store_camera_orientation()
         self.set_camera_orientation(phi=75 * DEGREES, theta=-30 * DEGREES)
 
       
@@ -291,7 +317,6 @@ class Main_3D(ThreeDScene):
         self.add_fixed_in_frame_mobjects(result_vector_txt)
         self.wait(5*TIME_SCALE)
         self.clear()
-        self.restore_camera_orientation()
 
     def animated_table_tensors(self):
         self.set_camera_orientation(0,-90*DEGREES,0)
@@ -662,22 +687,26 @@ class Main_3D(ThreeDScene):
         self.tex_template.add_to_preamble(r'\usepackage{xcolor}')
 
         # # Opening quote:
-        # self.opening_quote_v1()
-        # self.clear()
-        # # First, draw a derivative graph
-        # self.derivative_graph()
-        # self.clear()
-        # # Draw a derviative graph for a (2D) surface
-        # self.run_surface_screen()
-        # self.animated_table_tensors()
-        # self.clear()
-        # self.chain_rule_review()
-        # self.clear()
+        self.opening_quote_v1()
+        self.clear()
+        self.what_to_why()
+        self.clear()
+        self.set_camera_orientation(0,-90*DEGREES,0)
+
+        # First, draw a derivative graph
+        self.derivative_graph()
+        self.clear()
+        # Draw a derviative graph for a (2D) surface
+        self.run_surface_screen()
+        self.animated_table_tensors()
+        self.clear()
+        self.chain_rule_review()
+        self.clear()
         self.projection_example1()
         self.clear()
         self.final_screen()
 
 
-with tempconfig({"quality": "low_quality", "preview": True}):
+with tempconfig({"quality": "high_quality", "preview": True}):
     threeD_scene = Main_3D()
     threeD_scene.render()
