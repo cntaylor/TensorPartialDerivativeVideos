@@ -11,3 +11,10 @@ This is where I am creating a set of videos to describe how I use tensors to per
 
 # Video 2
 
+[Youtube link](https://youtu.be/DqYA3nlWPKg)
+
+[Tensor_and_Derivatives.py](Tensor_and_Derivatives.py)
+
+[Tensor_and_Derivatives.mp4](Tensor_and_Derivatives.mp4)
+
+[TensorVideo2.zip](TensorVideo2.zip)
