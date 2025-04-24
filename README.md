@@ -9,3 +9,5 @@ This is where I am creating a set of videos to describe how I use tensors to per
 
 [TensorVideo1.zip](TensorVideo1.zip)
 
+# Video 2
+
